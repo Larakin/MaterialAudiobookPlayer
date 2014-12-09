@@ -99,7 +99,7 @@ public class JumpToPosition extends DialogFragment {
                 int newPosition = (m + 60 * h) * 60 * 1000;
                 BookPlayFragment fragment = (BookPlayFragment) getTargetFragment();
                 if (fragment.mBound) {
-                    fragment.mService.changePosition(newPosition);
+                    fragment.audioPlayerService.changePosition(newPosition);
                 }
             }
         });

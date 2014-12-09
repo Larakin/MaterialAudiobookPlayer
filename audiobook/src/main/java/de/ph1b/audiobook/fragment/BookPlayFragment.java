@@ -73,32 +73,32 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
 
     private int duration;
 
-    public AudioPlayerService mService;
+    public AudioPlayerService audioPlayerService;
     public boolean mBound = false;
-    private boolean sleepTimerActive = false;
+    private Long sleepTimeMin = 0L;
 
     private final ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
             AudioPlayerService.LocalBinder binder = (AudioPlayerService.LocalBinder) service;
-            mService = binder.getService();
+            audioPlayerService = binder.getService();
 
-            if (mService.stateManager.getState() == PlayerStates.STARTED) {
+            if (audioPlayerService.stateManager.getState() == PlayerStates.STARTED) {
                 play_button.setImageResource(R.drawable.ic_pause_black_36dp);
             } else {
                 play_button.setImageResource(R.drawable.ic_play_arrow_black_36dp);
             }
-            mService.stateManager.addStateChangeListener(onStateChangedListener);
-            mService.stateManager.addTimeChangedListener(onTimeChangedListener);
-            sleepTimerActive = mService.sleepSandActive();
+            audioPlayerService.stateManager.addStateChangeListener(onStateChangedListener);
+            audioPlayerService.stateManager.addTimeChangedListener(onTimeChangedListener);
+            sleepTimeMin = audioPlayerService.getSleepDelay();
             Activity a = getActivity();
             if (a != null) {
                 getActivity().invalidateOptionsMenu();
             }
-            mService.setOnSleepStateChangedListener(new AudioPlayerService.OnSleepStateChangedListener() {
+            audioPlayerService.setOnSleepStateChangedListener(new AudioPlayerService.OnSleepStateChangedListener() {
                 @Override
-                public void onSleepStateChanged(boolean active) {
-                    sleepTimerActive = active;
+                public void onSleepStateChanged(long active) {
+                    sleepTimeMin = active;
                     Activity a = getActivity();
                     if (a != null) {
                         a.invalidateOptionsMenu();
@@ -109,7 +109,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
             //invalidateOptionsMenu to have the variable speed button shown or not.
             getActivity().invalidateOptionsMenu();
 
-            mService.updateGUI();
+            audioPlayerService.updateGUI();
             mBound = true;
         }
 
@@ -131,9 +131,9 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
         super.onStop();
         // Unbind from the service
         if (mBound) {
-            mService.stateManager.removeStateChangeListener(onStateChangedListener);
-            mService.stateManager.removeTimeChangedListener(onTimeChangedListener);
-            mService.setOnSleepStateChangedListener(null);
+            audioPlayerService.stateManager.removeStateChangeListener(onStateChangedListener);
+            audioPlayerService.stateManager.removeTimeChangedListener(onTimeChangedListener);
+            audioPlayerService.setOnSleepStateChangedListener(null);
             getActivity().unbindService(mConnection);
             mBound = false;
         }
@@ -185,8 +185,8 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
             if (action.equals(AudioPlayerService.GUI)) {
                 if (mBound) {
                     //setting up time related stuff
-                    seekBar.setProgress(mService.stateManager.getTime());
-                    playedTimeView.setText(formatTime(mService.stateManager.getTime()));
+                    seekBar.setProgress(audioPlayerService.stateManager.getTime());
+                    playedTimeView.setText(formatTime(audioPlayerService.stateManager.getTime()));
                 }
 
                 MediaDetail media = intent.getParcelableExtra(AudioPlayerService.GUI_MEDIA);
@@ -313,7 +313,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
                 if (mBound)
-                    mService.changePosition(position);
+                    audioPlayerService.changePosition(position);
 
                 playedTimeView.setText(formatTime(position));
                 seekBarIsUpdating = false;
@@ -343,7 +343,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
                 public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                     if (position != oldPosition) {
                         if (mBound)
-                            mService.changeBookPosition(allMedia.get(position).getId());
+                            audioPlayerService.changeBookPosition(allMedia.get(position).getId());
                         oldPosition = position;
                     }
                 }
@@ -364,17 +364,21 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
         MenuItem timeLapseItem = menu.findItem(R.id.action_time_lapse);
         timeLapseItem.setVisible(false);
         if (mBound) {
-            if (mService.variablePlaybackSpeedIsAvailable())
+            if (audioPlayerService.variablePlaybackSpeedIsAvailable())
                 timeLapseItem.setVisible(true);
             MenuItem sleepTimerItem = menu.findItem(R.id.action_sleep);
 
-            if (sleepTimerActive) {
+            if (sleepTimerActive()) {
                 sleepTimerItem.setIcon(R.drawable.ic_alarm_on_white_24dp);
             } else {
                 sleepTimerItem.setIcon(R.drawable.ic_snooze_white_24dp);
             }
         }
         super.onPrepareOptionsMenu(menu);
+    }
+
+    private boolean sleepTimerActive() {
+        return sleepTimeMin != AudioPlayerService.SLEEP_TIMER_INACTIVE;
     }
 
     private String formatTime(int ms) {
@@ -389,16 +393,16 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
         if (mBound) {
             switch (view.getId()) {
                 case R.id.play:
-                    if (mService.stateManager.getState() == PlayerStates.STARTED) {
-                        mService.pause(true);
+                    if (audioPlayerService.stateManager.getState() == PlayerStates.STARTED) {
+                        audioPlayerService.pause(true);
                     } else
-                        mService.play();
+                        audioPlayerService.play();
                     break;
                 case R.id.rewind:
-                    mService.rewind();
+                    audioPlayerService.rewind();
                     break;
                 case R.id.fast_forward:
-                    mService.fastForward();
+                    audioPlayerService.fastForward();
                     break;
                 case R.id.played:
                     launchJumpToPositionDialog();
@@ -436,14 +440,14 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
                 return true;
             case R.id.action_sleep:
                 if (mBound) {
-                    mService.toggleSleepSand();
+                    audioPlayerService.toggleSleepSand();
                 }
                 return true;
             case R.id.action_time_lapse:
                 SetPlaybackSpeedDialog dialog = new SetPlaybackSpeedDialog();
                 dialog.setTargetFragment(this, 42);
                 Bundle args = new Bundle();
-                args.putFloat(SetPlaybackSpeedDialog.DEFAULT_AMOUNT, mService.getPlaybackSpeed());
+                args.putFloat(SetPlaybackSpeedDialog.DEFAULT_AMOUNT, audioPlayerService.getPlaybackSpeed());
                 dialog.setArguments(args);
                 dialog.show(getFragmentManager(), TAG);
                 return true;
@@ -480,7 +484,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
     @Override
     public void onSpeedChanged(float speed) {
         if (mBound) {
-            mService.setPlaybackSpeed(speed);
+            audioPlayerService.setPlaybackSpeed(speed);
         }
     }
 }

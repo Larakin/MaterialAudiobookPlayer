@@ -59,6 +59,7 @@ public class AudioPlayerService extends Service {
 
 
     private static final int NOTIFICATION_ID = 1;
+    public static final long SLEEP_TIMER_INACTIVE = 0L;
 
     private float playbackSpeed = 1;
 
@@ -443,7 +444,7 @@ public class AudioPlayerService extends Service {
 
         stopAfterCurrentTrack = false;
         if (onSleepStateChangedListener != null) {
-            onSleepStateChangedListener.onSleepStateChanged(false);
+            onSleepStateChangedListener.onSleepStateChanged(SLEEP_TIMER_INACTIVE);
         }
 
         //noinspection deprecation
@@ -687,7 +688,7 @@ public class AudioPlayerService extends Service {
     private OnSleepStateChangedListener onSleepStateChangedListener;
 
     public interface OnSleepStateChangedListener {
-        public void onSleepStateChanged(boolean active);
+        public void onSleepStateChanged(long active);
     }
 
     public void setOnSleepStateChangedListener(OnSleepStateChangedListener onSleepStateChangedListener) {
@@ -698,13 +699,19 @@ public class AudioPlayerService extends Service {
         return sleepSand != null && !sleepSand.isCancelled() && !sleepSand.isDone();
     }
 
+    public long getSleepDelay() {
+        if (sleepSand != null) {
+            return sleepSand.getDelay(TimeUnit.MINUTES);
+        }
+        return 0L;
+    }
 
     public void toggleSleepSand() {
         if (sleepSandActive()) {
             sleepSand.cancel(false);
             stopAfterCurrentTrack = false;
             if (onSleepStateChangedListener != null) {
-                onSleepStateChangedListener.onSleepStateChanged(false);
+                onSleepStateChangedListener.onSleepStateChanged(0L);
             }
 
             Toast sleepToast = Toast.makeText(this, R.string.sleep_timer_canceled, Toast.LENGTH_SHORT);
@@ -732,7 +739,7 @@ public class AudioPlayerService extends Service {
                             mediaPlayer.release();
                             stateManager.setState(PlayerStates.DEAD);
                             if (onSleepStateChangedListener != null) {
-                                onSleepStateChangedListener.onSleepStateChanged(false);
+                                onSleepStateChangedListener.onSleepStateChanged(0L);
                             }
                         } finally {
                             playerLock.unlock();
@@ -743,7 +750,7 @@ public class AudioPlayerService extends Service {
                 }
             }, minutes, TimeUnit.MINUTES);
             if (onSleepStateChangedListener != null)
-                onSleepStateChangedListener.onSleepStateChanged(true);
+                onSleepStateChangedListener.onSleepStateChanged(getSleepDelay());
         }
     }
 
