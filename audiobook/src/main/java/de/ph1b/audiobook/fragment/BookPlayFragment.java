@@ -55,6 +55,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
 
     private ImageButton play_button;
     private TextView playedTimeView;
+    private TextView sleepTimeView;
     private SeekBar seekBar;
     private Spinner bookSpinner;
     private TextView maxTimeView;
@@ -174,6 +175,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
                     });
                 }
             }
+            sleepTimeView.setText(sleepTimeMin.toString());
         }
     };
 
@@ -275,6 +277,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
         ImageButton rewind_button = (ImageButton) v.findViewById(R.id.rewind);
         ImageButton fast_forward_button = (ImageButton) v.findViewById(R.id.fast_forward);
         playedTimeView = (TextView) v.findViewById(R.id.played);
+        sleepTimeView = (TextView) v.findViewById(R.id.sleepTime);
         ImageView coverView = (ImageView) v.findViewById(R.id.book_cover);
         maxTimeView = (TextView) v.findViewById(R.id.maxTime);
         bookSpinner = (Spinner) v.findViewById(R.id.book_spinner);
@@ -369,7 +372,7 @@ public class BookPlayFragment extends Fragment implements OnClickListener, SetPl
             MenuItem sleepTimerItem = menu.findItem(R.id.action_sleep);
 
             if (sleepTimerActive()) {
-                sleepTimerItem.setIcon(R.drawable.ic_alarm_on_white_24dp);
+                sleepTimerItem.setIcon(R.drawable.ic_sleep_on_white_24dp);
             } else {
                 sleepTimerItem.setIcon(R.drawable.ic_snooze_white_24dp);
             }

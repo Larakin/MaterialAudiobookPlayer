@@ -70,6 +70,7 @@
     <string tools:ignore="MissingTranslation" name="delete_book_keep">Keep</string>
     <string tools:ignore="MissingTranslation" name="pref_title_track_to_end">Continue till end</string>
     <string tools:ignore="MissingTranslation" name="pref_summary_track_to_end">Continues playing till the end of the track, after sleep timer has triggered.</string>
+    <string name="NoSleep">No Sleep</string>
 
 
 </resources>
